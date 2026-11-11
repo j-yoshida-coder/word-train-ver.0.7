@@ -1,0 +1,1 @@
+# word-train-ver.0.7

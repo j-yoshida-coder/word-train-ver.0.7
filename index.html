@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>英単語学習アプリ</title>
+    <!-- タイトル用フォント（オフラインでも標準フォントで表示されます） -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --blue: #2563eb; --blue-d: #1d4ed8;
+            --orange: #f97316; --orange-d: #ea580c;
+            --green: #16a34a; --green-d: #15803d;
+            --red: #ef4444; --red-d: #dc2626;
+            --gray: #6b7280; --gray-d: #4b5563;
+            --yellow: #eab308; --yellow-d: #ca8a04;
+            --purple: #7c3aed; --purple-d: #6d28d9;
+            --text: #1f2937;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            background: #f3f4f6;
+            color: var(--text);
+            font-family: system-ui, -apple-system, "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+                         "Noto Sans JP", "Yu Gothic UI", Meiryo, sans-serif;
+        }
+        .app {
+            width: 100%;
+            max-width: 720px;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, .08);
+            padding: 28px;
+            text-align: center;
+        }
+        h1 {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            font-size: 2.2rem;
+            margin: 0 0 6px;
+        }
+        .note { color: var(--red-d); font-size: .85rem; margin: 0 0 14px; }
+        .bubble {
+            position: relative;
+            display: inline-block;
+            background: #e5e7eb;
+            border-radius: 10px;
+            padding: 10px 18px;
+            margin-bottom: 22px;
+        }
+        .bubble::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            top: 100%;
+            transform: translateX(-50%);
+            border: 10px solid transparent;
+            border-top-color: #e5e7eb;
+            border-bottom: 0;
+        }
+
+        /* ボタン共通 */
+        button {
+            font: inherit;
+            font-weight: 700;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 18px;
+            cursor: pointer;
+            transition: background-color .15s, transform .15s, opacity .15s, border-color .15s;
+        }
+        button:disabled { opacity: .4; cursor: not-allowed; }
+        button:focus-visible, .card:focus-visible { outline: 3px solid #93c5fd; outline-offset: 2px; }
+        .btn-blue   { background: var(--blue); }   .btn-blue:hover:not(:disabled)   { background: var(--blue-d); }
+        .btn-orange { background: var(--orange); } .btn-orange:hover:not(:disabled) { background: var(--orange-d); }
+        .btn-green  { background: var(--green); }  .btn-green:hover:not(:disabled)  { background: var(--green-d); }
+        .btn-red    { background: var(--red); }    .btn-red:hover:not(:disabled)    { background: var(--red-d); }
+        .btn-gray   { background: var(--gray); }   .btn-gray:hover:not(:disabled)   { background: var(--gray-d); }
+        .btn-yellow { background: var(--yellow); } .btn-yellow:hover:not(:disabled) { background: var(--yellow-d); }
+        .btn-purple { background: var(--purple); } .btn-purple:hover:not(:disabled) { background: var(--purple-d); }
+        .btn-arrow  { font-size: 1.2rem; padding: 8px 20px; }
+
+        .tabs { display: flex; justify-content: center; margin-bottom: 8px; }
+        .tab { background: #e5e7eb; color: var(--text); border-radius: 0; padding: 10px 18px; }
+        .tab:first-child { border-radius: 10px 0 0 10px; }
+        .tab:last-child  { border-radius: 0 10px 10px 0; }
+        .tab.active { background: var(--blue); color: #fff; }
+
+        .hidden { display: none !important; }
+        #message { min-height: 1.5em; font-weight: 600; margin: 10px 0; }
+
+        /* 入力タブ */
+        .desc { color: #4b5563; font-size: .95rem; line-height: 1.6; }
+        .list-bar, .name-row {
+            display: flex; justify-content: center; align-items: center;
+            gap: 8px; flex-wrap: wrap; margin: 10px 0;
+        }
+        textarea, input[type="text"], select {
+            font: inherit;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 8px;
+            background: #fff;
+            color: var(--text);
+        }
+        textarea { width: 100%; height: 190px; font-size: .9rem; margin-bottom: 12px; }
+        textarea:focus, input[type="text"]:focus, select:focus { outline: 2px solid #93c5fd; }
+
+        /* 学習タブ */
+        .stats { font-size: .9rem; color: #4b5563; display: flex; justify-content: center; gap: 6px 14px; flex-wrap: wrap; }
+        .progress { height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin: 8px 0 14px; }
+        .progress > div { height: 100%; width: 0; background: var(--green); transition: width .3s; }
+
+        .card-wrap { position: relative; margin-bottom: 12px; }
+        .card {
+            min-height: 180px;
+            padding: 20px;
+            border: 2px dashed #d1d5db;
+            border-radius: 16px;
+            background: #fff;
+            box-shadow: inset 0 2px 6px rgba(0, 0, 0, .05);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .card .main { font-size: 2.6rem; font-weight: 700; word-break: break-word; }
+        .card .main.ja { font-size: 2rem; }
+        .card .sub  { font-size: 1.6rem; color: #4b5563; word-break: break-word; }
+        .card .hint { font-size: .85rem; color: #9ca3af; margin-top: 4px; }
+        .card .wait { font-size: 1.5rem; color: var(--gray); animation: pulse 1.5s infinite; }
+        @keyframes pulse { 50% { opacity: .4; } }
+        .overlay {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background: rgba(0, 0, 0, .35);
+            border-radius: 16px;
+            color: #fff;
+            cursor: pointer;
+        }
+        .overlay span { font-size: 3.5rem; }
+
+        .row { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+        .btn-know, .btn-notyet { border: 3px solid transparent; min-width: 120px; }
+        .btn-know   { background: var(--green); }
+        .btn-notyet { background: var(--gray); }
+        .btn-know.on, .btn-notyet.on { border-color: #fbbf24; }
+        #counter { color: var(--gray); font-size: .9rem; margin: 10px 0 0; min-height: 1.2em; }
+        .check-label { display: inline-flex; align-items: center; gap: 6px; font-size: .95rem; cursor: pointer; }
+        .check-label input { width: 18px; height: 18px; }
+
+        /* STEP（アコーディオン） */
+        .steps { margin-top: 18px; display: flex; flex-direction: column; gap: 8px; }
+        .step-head {
+            width: 100%;
+            display: flex; justify-content: space-between; align-items: center;
+            background: #f3f4f6; color: var(--text);
+            border-radius: 10px; padding: 12px 14px;
+            font-size: 1.05rem; text-align: left;
+        }
+        .step-head:hover { background: #e5e7eb; }
+        .step-head[aria-expanded="true"] { border-radius: 10px 10px 0 0; }
+        .step-body { border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px; padding: 12px; }
+        .mode { border: 3px solid transparent; }
+        .mode.active { border-color: var(--red); transform: scale(1.05); }
+        .mode-hint {
+            background: #eff6ff; color: #1e3a8a;
+            border-radius: 8px; padding: 10px; margin: 12px 0 4px;
+            font-size: .92rem; line-height: 1.5;
+        }
+
+        /* テスト（4択・つづり・発音） */
+        #taskArea { margin: 4px 0 6px; }
+        .choice {
+            display: block; width: 100%;
+            margin: 6px 0;
+            background: #fff; color: var(--text);
+            border: 2px solid #d1d5db;
+            font-size: 1.2rem; text-align: left;
+        }
+        .choice:hover:not(:disabled) { background: #f9fafb; border-color: var(--blue); }
+        .choice:disabled { opacity: 1; cursor: default; }
+        .choice.correct { background: #dcfce7; border-color: var(--green); }
+        .choice.wrong   { background: #fee2e2; border-color: var(--red); }
+        .feedback { font-size: 1.2rem; font-weight: 700; min-height: 1.4em; margin: 8px 0; }
+        .feedback.ok { color: var(--green); }
+        .feedback.ng { color: var(--red-d); }
+        #spellInput { font-size: 1.4rem; width: 100%; max-width: 360px; text-align: center; }
+        .hint-text { font-size: 1.3rem; letter-spacing: .15em; color: var(--purple); min-height: 1.4em; margin: 6px 0; }
+
+        details.settings { text-align: left; margin-top: 18px; background: #f9fafb; border-radius: 10px; padding: 8px 14px; }
+        details.settings summary { cursor: pointer; font-weight: 700; padding: 4px 0; }
+        .settings label { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+        .settings select { max-width: 100%; }
+        .small { font-size: .8rem; color: var(--gray); line-height: 1.5; }
+        .warn { color: var(--red-d); }
+
+        @media (max-width: 480px) {
+            body { padding: 8px; }
+            .app { padding: 16px; }
+            h1 { font-size: 1.7rem; }
+            .card .main { font-size: 2.1rem; }
+            .card .main.ja { font-size: 1.7rem; }
+            button { padding: 9px 12px; }
+            .tab { padding: 9px 10px; font-size: .9rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <h1>英単語学習アプリ</h1>
+    <p class="note">音が出ないときは、消音（マナーモード）を解除して、音量を上げてください。</p>
+    <div class="bubble">発音しながら覚えよう！</div>
+
+    <div class="tabs" role="tablist">
+        <button id="inputTab" class="tab active" role="tab">① 単語リストを作る</button>
+        <button id="learnTab" class="tab" role="tab">② 学習する</button>
+    </div>
+
+    <p id="message" aria-live="polite"></p>
+
+    <!-- ============ ① 単語リストを作る ============ -->
+    <section id="inputSection">
+        <div class="list-bar">
+            <label for="listSelect">保存したリスト：</label>
+            <select id="listSelect"></select>
+            <button id="newListBtn" class="btn-gray">新しく作る</button>
+            <button id="deleteListBtn" class="btn-red">削除</button>
+        </div>
+        <p class="desc">
+            Excelなどの表で、A列に英単語、B列に意味を入れてコピーし、下に貼り付けてください。<br>
+            「apple,りんご」のようにカンマで区切った形でも読み込めます。
+        </p>
+        <div class="name-row">
+            <label for="listName">リストの名前：</label>
+            <input type="text" id="listName" maxlength="30" placeholder="例：Unit 1">
+        </div>
+        <textarea id="dataInput" spellcheck="false" placeholder="例：
+apple	りんご
+book	本
+dog	犬"></textarea>
+        <button id="loadWordsBtn" class="btn-blue">保存して学習を始める</button>
+    </section>
+
+    <!-- ============ ② 学習する ============ -->
+    <section id="learnSection" class="hidden">
+        <div class="stats">
+            <span id="listLabel"></span>
+            <span id="knownStat"></span>
+            <span id="streakStat"></span>
+        </div>
+        <div class="progress" aria-hidden="true"><div id="progressBar"></div></div>
+
+        <div class="card-wrap">
+            <div id="wordCard" class="card" tabindex="0" role="button" aria-live="polite"></div>
+            <div id="pauseOverlay" class="overlay hidden"><span>⏸️</span>タップで再開</div>
+        </div>
+
+        <div id="taskArea" class="hidden"></div>
+
+        <div id="knowRow" class="row">
+            <button id="notYetBtn" class="btn-notyet">まだ 🤔</button>
+            <button id="knowBtn" class="btn-know">覚えた ✓</button>
+        </div>
+
+        <p id="counter"></p>
+
+        <div class="row">
+            <button id="restartBtn" class="btn-gray">最初から</button>
+            <button id="prevBtn" class="btn-gray btn-arrow" aria-label="前の単語">◀</button>
+            <button id="nextBtn" class="btn-gray btn-arrow" aria-label="次の単語">▶</button>
+            <button id="shuffleBtn" class="btn-red">シャッフル</button>
+            <button id="autoplayBtn" class="btn-yellow">▶ 通し再生</button>
+            <button id="pauseBtn" class="btn-gray hidden">⏸ 一時停止</button>
+        </div>
+        <div class="row">
+            <button id="speakNormalBtn" class="btn-blue">🔊</button>
+            <button id="speakSlowBtn" class="btn-blue">ゆっくり🔊</button>
+            <label class="check-label"><input type="checkbox" id="onlyUnknown">「まだ」の単語だけ</label>
+        </div>
+
+        <div class="steps">
+            <div>
+                <button class="step-head" data-step="1" aria-expanded="true">
+                    STEP 1　英語を聞いて答える <span class="chev">▼</span>
+                </button>
+                <div class="step-body" data-step-body="1">
+                    <div class="row">
+                        <button class="mode btn-blue" data-mode="en-ja">英語 → 意味</button>
+                        <button class="mode btn-orange" data-mode="audio">🔊 → 英語＋意味</button>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <button class="step-head" data-step="2" aria-expanded="false">
+                    STEP 2　日本語を見て答える <span class="chev">▶</span>
+                </button>
+                <div class="step-body hidden" data-step-body="2">
+                    <div class="row">
+                        <button class="mode btn-blue" data-mode="ja-en">意味 → 英語</button>
+                        <button class="mode btn-orange" data-mode="ja-audio">意味 → 英語＋🔊</button>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <button class="step-head" data-step="3" aria-expanded="false">
+                    STEP 3　テストに挑戦 <span class="chev">▶</span>
+                </button>
+                <div class="step-body hidden" data-step-body="3">
+                    <div class="row">
+                        <button class="mode btn-green" data-mode="quiz-ej">4択（英語→意味）</button>
+                        <button class="mode btn-green" data-mode="quiz-je">4択（意味→英語）</button>
+                        <button class="mode btn-purple" data-mode="spell">つづり</button>
+                        <button class="mode btn-orange" data-mode="speak">発音チェック🎤</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <p id="modeHint" class="mode-hint"></p>
+
+        <details class="settings">
+            <summary>⚙️ 設定</summary>
+            <label>読み上げの速さ
+                <select id="rateSelect">
+                    <option value="0.75">ややゆっくり</option>
+                    <option value="0.9">少しゆっくり</option>
+                    <option value="1">ふつう</option>
+                    <option value="1.15">少し速い</option>
+                </select>
+            </label>
+            <label>考える時間（答えが出るまで）
+                <select id="waitSelect">
+                    <option value="2">2秒</option>
+                    <option value="3">3秒</option>
+                    <option value="4">4秒</option>
+                    <option value="5">5秒</option>
+                    <option value="6">6秒</option>
+                </select>
+            </label>
+            <label>英語の声
+                <select id="voiceSelect"><option value="">（標準）</option></select>
+            </label>
+            <p id="voiceWarn" class="small warn hidden">
+                この端末には英語の音声が見つかりませんでした。端末の設定で英語の音声を追加すると、きれいな発音で聞けます。
+            </p>
+            <label class="check-label"><input type="checkbox" id="speakJa">日本語（意味）も読み上げる</label>
+        </details>
+
+        <p class="small">キーボード：Space＝めくる／一時停止　← →＝前・次の単語　Enter＝発音　1〜4＝4択の答え</p>
+    </section>
+</div>
+
+<script>
+(() => {
+    'use strict';
+
+    /* ================= 基本設定 ================= */
+    const $ = id => document.getElementById(id);
+    const synth = ('speechSynthesis' in window) ? window.speechSynthesis : null;
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+    const STORE_KEY = 'vocabApp.v2';
+    const OLD_STORE_KEY = 'vocabularyData';
+    const FORBIDDEN_NAMES = ['__proto__', 'constructor', 'prototype'];
+
+    const MODES = {
+        'en-ja':    { step: 1, hint: '英語を見て、聞いて、意味を言ってみよう。カードをタップすると意味が出ます。' },
+        'audio':    { step: 1, hint: '発音だけを聞いて、つづりと意味を思い出そう。少し待つと答えが出ます（カードをタップで一時停止）。' },
+        'ja-en':    { step: 2, hint: '意味を見て、英語で言ってみよう。カードをタップすると英語が出て発音されます。' },
+        'ja-audio': { step: 2, hint: '意味を見て、英語で言ってみよう。少し待つと答えと発音が出ます（カードをタップで一時停止）。' },
+        'quiz-ej':  { step: 3, hint: '英語を見て、正しい意味を4つの中から選ぼう。まちがえた単語は「まだ」になります。' },
+        'quiz-je':  { step: 3, hint: '意味を見て、正しい英語を4つの中から選ぼう。まちがえた単語は「まだ」になります。' },
+        'spell':    { step: 3, hint: '意味と発音をヒントに、英語のつづりを入力しよう。まちがえた単語は「まだ」になります。' },
+        'speak':    { step: 3, hint: 'お手本（🔊）を聞いてから🎤ボタンを押して発音しよう。正しく発音できたら合格！（インターネット接続とマイクの許可が必要です）' },
+    };
+    const isTestMode = m => MODES[m].step === 3;
+
+    /* ================= DOM ================= */
+    const inputTab = $('inputTab'), learnTab = $('learnTab');
+    const inputSection = $('inputSection'), learnSection = $('learnSection');
+    const messageEl = $('message');
+    const listSelect = $('listSelect'), listName = $('listName'), dataInput = $('dataInput');
+    const wordCard = $('wordCard'), pauseOverlay = $('pauseOverlay'), taskArea = $('taskArea');
+    const knowRow = $('knowRow'), knowBtn = $('knowBtn'), notYetBtn = $('notYetBtn');
+    const counterEl = $('counter'), progressBar = $('progressBar');
+    const listLabel = $('listLabel'), knownStat = $('knownStat'), streakStat = $('streakStat');
+    const prevBtn = $('prevBtn'), nextBtn = $('nextBtn'), restartBtn = $('restartBtn');
+    const shuffleBtn = $('shuffleBtn'), autoplayBtn = $('autoplayBtn'), pauseBtn = $('pauseBtn');
+    const speakNormalBtn = $('speakNormalBtn'), speakSlowBtn = $('speakSlowBtn');
+    const onlyUnknownChk = $('onlyUnknown'), modeHint = $('modeHint');
+    const rateSelect = $('rateSelect'), waitSelect = $('waitSelect'), voiceSelect = $('voiceSelect');
+    const voiceWarn = $('voiceWarn'), speakJaChk = $('speakJa');
+    const modeButtons = [...document.querySelectorAll('.mode')];
+    const stepHeads = [...document.querySelectorAll('.step-head')];
+
+    /* ================= 保存データ ================= */
+    // store = { lists: { 名前: [{en, ja, known}] }, current, settings, log }
+    let store = loadStore();
+
+    function loadStore() {
+        const base = {
+            lists: {},
+            current: null,
+            settings: { rate: 1, wait: 3, voiceName: '', speakJa: false, onlyUnknown: false },
+            log: { last: null, streak: 0, days: 0 },
+        };
+        try {
+            const s = JSON.parse(localStorage.getItem(STORE_KEY));
+            if (s && typeof s === 'object' && s.lists) {
+                base.lists = sanitizeLists(s.lists);
+                base.current = typeof s.current === 'string' ? s.current : null;
+                Object.assign(base.settings, s.settings || {});
+                Object.assign(base.log, s.log || {});
+            }
+        } catch (e) { /* 壊れたデータは無視 */ }
+
+        // 旧バージョンのデータを引き継ぐ
+        if (!Object.keys(base.lists).length) {
+            try {
+                const old = JSON.parse(localStorage.getItem(OLD_STORE_KEY));
+                if (Array.isArray(old) && old.length) {
+                    const list = old
+                        .map(w => ({ en: String(w.english || '').trim(), ja: String(w.japanese || '').trim(), known: false }))
+                        .filter(w => w.en && w.ja);
+                    if (list.length) {
+                        base.lists['前回のリスト'] = list;
+                        base.current = '前回のリスト';
+                    }
+                }
+            } catch (e) { /* 無視 */ }
+        }
+        if (!hasList(base, base.current)) base.current = Object.keys(base.lists)[0] || null;
+        return base;
+    }
+
+    function sanitizeLists(lists) {
+        const out = {};
+        for (const [name, arr] of Object.entries(lists)) {
+            if (FORBIDDEN_NAMES.includes(name) || !Array.isArray(arr)) continue;
+            out[name] = arr
+                .filter(w => w && typeof w.en === 'string' && typeof w.ja === 'string')
+                .map(w => ({ en: w.en, ja: w.ja, known: !!w.known }));
+        }
+        return out;
+    }
+
+    function hasList(s, name) {
+        return !!name && Object.prototype.hasOwnProperty.call(s.lists, name);
+    }
+
+    function saveStore() {
+        try {
+            localStorage.setItem(STORE_KEY, JSON.stringify(store));
+        } catch (e) {
+            showMessage('保存できませんでした（ブラウザの保存容量が足りない可能性があります）。', 'error');
+        }
+    }
+
+    const words = () => hasList(store, store.current) ? store.lists[store.current] : [];
+
+    /* ================= 学習の状態 ================= */
+    let mode = 'en-ja';
+    let order = [];          // 学習する単語の番号（シャッフル・「まだ」だけに対応）
+    let orderFor = null;     // order がどのリスト用か
+    let pos = 0;
+    let autoplay = false;
+    let paused = false;
+    let phase = 'idle';      // idle / running / done / finished
+    let revealed = false;
+    let answered = false;
+    let score = { ok: 0, total: 0 };
+    let recognition = null;
+
+    const cur = () => (order.length ? words()[order[pos]] : undefined);
+
+    function buildOrder() {
+        const ws = words();
+        order = ws.map((_, i) => i).filter(i => !store.settings.onlyUnknown || !ws[i].known);
+        orderFor = store.current;
+        pos = 0;
+    }
+
+    function shuffleArray(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    /* ================= 非同期処理の管理 =================
+       操作のたびに runId を進め、古い処理は自動的に打ち切る。
+       これで「停止したのに次へ進む」「2つの再生が重なる」を防ぐ。 */
+    let runId = 0;
+    const CANCEL = Symbol('cancel');
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+    function newRun() {
+        runId++;
+        paused = false;
+        renderPause();
+        if (synth) synth.cancel();
+        stopRecognition();
+        return runId;
+    }
+
+    function guard(id) {
+        if (id !== runId) throw CANCEL;
+    }
+
+    function start(task) {
+        const id = newRun();
+        Promise.resolve()
+            .then(() => task(id))
+            .catch(e => { if (e !== CANCEL) console.error(e); });
+    }
+
+    // 一時停止に対応した待ち時間
+    async function wait(ms, id) {
+        let remain = ms;
+        while (remain > 0) {
+            await sleep(100);
+            guard(id);
+            if (!paused) remain -= 100;
+        }
+    }
+
+    async function holdIfPaused(id) {
+        while (paused) {
+            await sleep(100);
+            guard(id);
+        }
+    }
+
+    /* ================= 音声読み上げ ================= */
+    let enVoice = null, jaVoice = null;
+    const NOVELTY_VOICES = /Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Grandma|Grandpa|Eddy|Flo|Reed|Rocko|Sandy|Shelley/i;
+
+    function loadVoices() {
+        if (!synth) return;
+        const voices = synth.getVoices();
+        if (!voices.length) return;
+
+        jaVoice = voices.find(v => /^ja/i.test(v.lang)) || null;
+        const ens = voices.filter(v => /^en([-_]|$)/i.test(v.lang));
+        voiceSelect.replaceChildren();
+
+        if (!ens.length) {
+            enVoice = null;
+            voiceSelect.append(new Option('（標準）', ''));
+            voiceWarn.classList.remove('hidden');
+            return;
+        }
+        voiceWarn.classList.add('hidden');
+
+        const rank = v =>
+            (/en[-_]US/i.test(v.lang) ? 4 : /en[-_]GB/i.test(v.lang) ? 3 : 1) +
+            (/Samantha|Google US English|Aria|Jenny|Zira|Daniel|Karen/i.test(v.name) ? 2 : 0) +
+            (NOVELTY_VOICES.test(v.name) ? -10 : 0);
+        ens.sort((a, b) => rank(b) - rank(a));
+        ens.forEach(v => voiceSelect.append(new Option(`${v.name}（${v.lang}）`, v.name)));
+
+        enVoice = ens.find(v => v.name === store.settings.voiceName) || ens[0];
+        voiceSelect.value = enVoice.name;
+    }
+
+    // 音声を再生し、終わったら（失敗しても）必ず解決する Promise を返す
+    function speak(text, { lang = 'en', rate } = {}) {
+        return new Promise(resolve => {
+            if (!synth || !text) { resolve(); return; }
+            let done = false;
+            const u = new SpeechSynthesisUtterance(text);
+            if (lang === 'en') {
+                u.lang = enVoice ? enVoice.lang : 'en-US';
+                if (enVoice) u.voice = enVoice;
+            } else {
+                u.lang = 'ja-JP';
+                if (jaVoice) u.voice = jaVoice;
+            }
+            u.rate = rate || Number(store.settings.rate) || 1;
+            const finish = () => {
+                if (done) return;
+                done = true;
+                clearTimeout(fallback);
+                resolve();
+            };
+            u.onend = finish;
+            u.onerror = finish;
+            // 音声が出ない環境でも止まらないよう、一定時間で先へ進む
+            const fallback = setTimeout(finish, Math.min(12000, 2500 + text.length * 200 / u.rate));
+            synth.speak(u);
+        });
+    }
+
+    async function say(text, id, opts) {
+        await holdIfPaused(id);
+        await sleep(50);          // cancel 直後の speak が無視される不具合への対策
+        guard(id);
+        await speak(text, opts);
+        guard(id);
+    }
+
+    // 🔊ボタン用：進行中の流れ（タイマー）は止めずに発音だけする
+    function speakNow(rate) {
+        const w = cur();
+        if (!w || !synth) return;
+        synth.cancel();
+        speak(w.en, { rate });
+    }
+
+    // iPad / iPhone では最初の読み上げをタップ操作の中で行う必要がある
+    let audioUnlocked = false;
+    function unlockAudio() {
+        if (audioUnlocked || !synth) return;
+        audioUnlocked = true;
+        const u = new SpeechSynthesisUtterance(' ');
+        u.volume = 0;
+        synth.speak(u);
+    }
+
+    /* ================= 表示 ================= */
+    function el(tag, cls, text) {
+        const e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (text != null) e.textContent = text;   // textContent なので HTML として解釈されない
+        return e;
+    }
+
+    function renderCard({ main, mainLang = 'en', sub, hint, waitText } = {}) {
+        wordCard.replaceChildren();
+        if (waitText) wordCard.append(el('div', 'wait', waitText));
+        if (main != null) {
+            const m = el('div', 'main' + (mainLang === 'ja' ? ' ja' : ''), main);
+            m.lang = mainLang;
+            wordCard.append(m);
+        }
+        if (sub != null) {
+            const s = el('div', 'sub', sub);
+            s.lang = 'ja';
+            wordCard.append(s);
+        }
+        if (hint) wordCard.append(el('div', 'hint', hint));
+    }
+
+    const showQuestionEn = (w, hint) => renderCard({ main: w.en, hint });
+    const showQuestionJa = (w, hint) => renderCard({ main: w.ja, mainLang: 'ja', hint });
+    const showBoth = (w, hint) => renderCard({ main: w.en, sub: w.ja, hint });
+
+    function renderPause() {
+        pauseOverlay.classList.toggle('hidden', !paused);
+        pauseBtn.textContent = paused ? '▶ 再開' : '⏸ 一時停止';
+    }
+
+    function renderAutoplayBtn() {
+        autoplayBtn.textContent = autoplay ? '■ 停止' : '▶ 通し再生';
+        autoplayBtn.classList.toggle('btn-yellow', !autoplay);
+        autoplayBtn.classList.toggle('btn-red', autoplay);
+        pauseBtn.classList.toggle('hidden', !autoplay);
+    }
+
+    function updateUI() {
+        const ws = words();
+        const n = order.length;
+        const w = cur();
+
+        let counter = n ? `${pos + 1} / ${n}` : '';
+        if (n && store.settings.onlyUnknown) counter += '（「まだ」の単語だけ）';
+        if (isTestMode(mode) && score.total) counter += `　正解 ${score.ok} / ${score.total}`;
+        counterEl.textContent = counter;
+        progressBar.style.width = n ? `${((pos + 1) / n) * 100}%` : '0';
+
+        prevBtn.disabled = !n || pos === 0 || phase === 'finished';
+        nextBtn.disabled = !n || phase === 'finished';
+        restartBtn.disabled = !n && !ws.length;
+        shuffleBtn.disabled = n < 2;
+        autoplayBtn.disabled = !n;
+
+        knowBtn.disabled = notYetBtn.disabled = !w || phase === 'finished';
+        knowBtn.classList.toggle('on', !!w && w.known);
+        notYetBtn.classList.toggle('on', !!w && !w.known);
+
+        const quizHidden = mode === 'quiz-je' && !answered;   // 4択（意味→英語）では答えが聞こえないように
+        speakNormalBtn.disabled = speakSlowBtn.disabled = !w || quizHidden || phase === 'finished';
+
+        listLabel.textContent = store.current ? `📘 ${store.current}` : '📘 リストなし';
+        knownStat.textContent = `覚えた ${ws.filter(x => x.known).length} / ${ws.length}`;
+        streakStat.textContent = store.log.days
+            ? `🔥 ${store.log.streak}日連続・合計${store.log.days}日`
+            : '🔥 今日から始めよう';
+    }
+
+    let messageTimer = null;
+    function showMessage(msg, type = 'success', ms = 4000) {
+        const colors = { success: '#16a34a', error: '#dc2626', info: '#2563eb' };
+        messageEl.textContent = msg;
+        messageEl.style.color = colors[type] || '#333';
+        clearTimeout(messageTimer);
+        if (ms) messageTimer = setTimeout(() => { messageEl.textContent = ''; }, ms);
+    }
+
+    /* ================= 学習記録（連続日数） ================= */
+    function dateStr(d) {
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function markStudied() {
+        const today = dateStr(new Date());
+        const log = store.log;
+        if (log.last === today) return;
+        const y = new Date();
+        y.setDate(y.getDate() - 1);
+        log.streak = log.last === dateStr(y) ? log.streak + 1 : 1;
+        log.days += 1;
+        log.last = today;
+        saveStore();
+    }
+
+    function setKnown(w, val) {
+        if (!w) return;
+        w.known = val;
+        saveStore();
+        updateUI();
+    }
+
+    /* ================= 単語の表示（モードごと） ================= */
+    function showCurrent() {
+        answered = false;
+        revealed = false;
+        phase = 'idle';
+        taskArea.replaceChildren();
+
+        if (!words().length) {
+            newRun();
+            renderCard({ main: 'データがありません', mainLang: 'ja', hint: '「① 単語リストを作る」で単語を読み込んでください' });
+            updateUI();
+            return;
+        }
+        if (!order.length) {
+            newRun();
+            renderAllKnown();
+            updateUI();
+            return;
+        }
+        markStudied();
+        updateUI();
+        if (autoplay) start(autoplayLoop);
+        else start(runMode);
+    }
+
+    async function runMode(id) {
+        const w = cur();
+        switch (mode) {
+            case 'en-ja':
+                showQuestionEn(w, 'タップで意味を表示');
+                await say(w.en, id);
+                break;
+            case 'ja-en':
+                showQuestionJa(w, 'タップで英語を表示');
+                if (store.settings.speakJa) await say(w.ja, id, { lang: 'ja' });
+                break;
+            case 'audio':
+            case 'ja-audio':
+                await playOnce(id, w);
+                showBoth(w, 'タップでもう一度');
+                break;
+            case 'quiz-ej':
+            case 'quiz-je':
+                renderQuiz(id, w);
+                break;
+            case 'spell':
+                renderSpell(id, w);
+                break;
+            case 'speak':
+                renderSpeak(id, w);
+                break;
+        }
+    }
+
+    // 問題 → 考える時間 → 答え の流れを1回分行う（通し再生と STEP の自動モードで使用）
+    async function playOnce(id, w) {
+        phase = 'running';
+        const t = (Number(store.settings.wait) || 3) * 1000;
+        const speakJa = store.settings.speakJa;
+        switch (mode) {
+            case 'en-ja':
+                showQuestionEn(w);
+                await say(w.en, id);
+                await wait(t, id);
+                showBoth(w);
+                if (speakJa) await say(w.ja, id, { lang: 'ja' });
+                break;
+            case 'ja-en':
+                showQuestionJa(w, '🤔 英語で言ってみよう');
+                if (speakJa) await say(w.ja, id, { lang: 'ja' });
+                await wait(t, id);
+                showBoth(w);
+                await say(w.en, id);   // 答えを表示してから発音する
+                break;
+            case 'audio':
+                renderCard({ waitText: '🔊 よく聞いてね' });
+                await say(w.en, id);
+                renderCard({ waitText: '🤔 つづりと意味は？' });
+                await wait(t, id);
+                showBoth(w);
+                await say(w.en, id);
+                break;
+            case 'ja-audio':
+                showQuestionJa(w, '🤔 英語で言ってみよう');
+                await wait(t, id);
+                showBoth(w);
+                await say(w.en, id);
+                break;
+        }
+        phase = 'done';
+        revealed = true;
+    }
+
+    async function autoplayLoop(id) {
+        for (;;) {
+            updateUI();
+            await playOnce(id, cur());
+            await wait(1500, id);
+            if (pos >= order.length - 1) {
+                stopAutoplay();
+                showFinish();
+                return;
+            }
+            pos++;
+        }
+    }
+
+    function onCardClick() {
+        unlockAudio();
+        if (!order.length || phase === 'finished' || isTestMode(mode)) return;
+        if (autoplay || phase === 'running') {
+            togglePause();
+            return;
+        }
+        const w = cur();
+        if (mode === 'en-ja' || mode === 'ja-en') {
+            revealed = !revealed;
+            if (revealed) {
+                start(async id => {
+                    showBoth(w, 'タップで戻す');
+                    if (mode === 'ja-en') await say(w.en, id);
+                    else if (store.settings.speakJa) await say(w.ja, id, { lang: 'ja' });
+                });
+            } else {
+                start(runMode);
+            }
+        } else {
+            start(runMode);   // 自動モードが終わった後はもう一度再生
+        }
+    }
+
+    function togglePause() {
+        paused = !paused;
+        renderPause();
+    }
+
+    /* ================= STEP 3：4択 ================= */
+    function renderQuiz(id, w) {
+        const toJa = mode === 'quiz-ej';
+        const key = toJa ? 'ja' : 'en';
+        const answer = w[key];
+        const others = shuffleArray([...new Set(words().map(x => x[key]))].filter(t => t !== answer));
+
+        if (!others.length) {
+            renderCard({ main: '4択には、ちがう単語が2つ以上必要です', mainLang: 'ja' });
+            return;
+        }
+        const choices = shuffleArray([answer, ...others.slice(0, 3)]);
+
+        if (toJa) {
+            showQuestionEn(w, '正しい意味を選ぼう');
+            say(w.en, id).catch(() => {});
+        } else {
+            showQuestionJa(w, '正しい英語を選ぼう');
+        }
+
+        const box = el('div', 'choices');
+        const feedback = el('p', 'feedback', '');
+        choices.forEach((c, i) => {
+            const b = el('button', 'choice', `${i + 1}. ${c}`);
+            b.lang = key;
+            b.dataset.correct = c === answer ? '1' : '';
+            b.addEventListener('click', () => answerQuiz(b, box, feedback, w));
+            box.append(b);
+        });
+        taskArea.replaceChildren(box, feedback);
+    }
+
+    function answerQuiz(btn, box, feedback, w) {
+        if (answered) return;
+        answered = true;
+        const ok = btn.dataset.correct === '1';
+        box.querySelectorAll('.choice').forEach(b => {
+            b.disabled = true;
+            if (b.dataset.correct) b.classList.add('correct');
+        });
+        score.total++;
+        if (ok) {
+            score.ok++;
+            feedback.textContent = '⭕ 正解！';
+            feedback.className = 'feedback ok';
+        } else {
+            btn.classList.add('wrong');
+            setKnown(w, false);
+            feedback.textContent = '❌ ざんねん！ 正解を確認しよう';
+            feedback.className = 'feedback ng';
+        }
+        showBoth(w);
+        start(id => say(w.en, id));
+        appendNextButton();
+        updateUI();
+    }
+
+    function appendNextButton() {
+        const nb = el('button', 'btn-blue', pos >= order.length - 1 ? '結果を見る ▶' : '次へ ▶');
+        nb.addEventListener('click', nextWord);
+        taskArea.append(el('div', 'row'));
+        taskArea.lastChild.append(nb);
+        nb.focus({ preventScroll: true });
+    }
+
+    /* ================= STEP 3：つづり ================= */
+    const normText = s => s.normalize('NFKC').toLowerCase()
+        .replace(/[’‘`´]/g, "'")
+        .replace(/[.!?。]+$/, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    function makeHint(en, n) {
+        let shown = 0;
+        return [...en].map(c => {
+            if (!/[A-Za-z]/.test(c)) return c === ' ' ? '　' : c;
+            shown++;
+            return shown <= n ? c : '_';
+        }).join(' ');
+    }
+
+    function renderSpell(id, w) {
+        showQuestionJa(w, '🔊ボタンで何度でも発音を聞けます');
+        say(w.en, id).catch(() => {});
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = 'spellInput';
+        input.lang = 'en';
+        input.placeholder = '英語を入力';
+        input.autocomplete = 'off';
+        input.spellcheck = false;
+        input.setAttribute('autocapitalize', 'off');
+        input.setAttribute('autocorrect', 'off');
+
+        const checkBtn = el('button', 'btn-blue', '答え合わせ');
+        const hintBtn = el('button', 'btn-purple', 'ヒント');
+        const hintP = el('p', 'hint-text', '');
+        const feedback = el('p', 'feedback', '');
+        const letters = (w.en.match(/[A-Za-z]/g) || []).length;
+        let hintLevel = 0;
+
+        hintBtn.addEventListener('click', () => {
+            hintLevel = Math.min(hintLevel + 1, letters);
+            hintP.textContent = makeHint(w.en, hintLevel);
+            input.focus();
+        });
+
+        const check = () => {
+            if (answered) return;
+            if (!input.value.trim()) {
+                feedback.textContent = '英語を入力してね';
+                feedback.className = 'feedback ng';
+                return;
+            }
+            answered = true;
+            input.readOnly = true;
+            checkBtn.disabled = hintBtn.disabled = true;
+            const ok = normText(input.value) === normText(w.en);
+            score.total++;
+            if (ok) {
+                score.ok++;
+                feedback.textContent = '⭕ 正解！';
+                feedback.className = 'feedback ok';
+            } else {
+                setKnown(w, false);
+                feedback.textContent = `❌ 正解は「${w.en}」`;
+                feedback.className = 'feedback ng';
+            }
+            showBoth(w);
+            start(id2 => say(w.en, id2));
+            appendNextButton();
+            updateUI();
+        };
+
+        checkBtn.addEventListener('click', check);
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.isComposing) {
+                e.preventDefault();
+                if (answered) nextWord(); else check();
+            }
+        });
+
+        const row1 = el('div', 'row'); row1.append(input);
+        const row2 = el('div', 'row'); row2.append(hintBtn, checkBtn);
+        taskArea.replaceChildren(row1, hintP, row2, feedback);
+        setTimeout(() => input.focus({ preventScroll: true }), 50);
+    }
+
+    /* ================= STEP 3：発音チェック ================= */
+    const normSpeech = s => s.normalize('NFKC').toLowerCase()
+        .replace(/[’‘`´]/g, "'")
+        .replace(/[^a-z0-9' ]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    function stopRecognition() {
+        if (recognition) {
+            const r = recognition;
+            recognition = null;
+            try { r.abort(); } catch (e) { /* 無視 */ }
+        }
+    }
+
+    function renderSpeak(id, w) {
+        showBoth(w);
+        const feedback = el('p', 'feedback', '');
+        if (!SpeechRec) {
+            feedback.textContent = 'このブラウザは発音チェックに対応していません。Chrome（パソコン・Android）や Safari（iPad・iPhone）で試してください。';
+            feedback.className = 'feedback ng';
+            taskArea.replaceChildren(feedback);
+            return;
+        }
+        say(w.en, id).catch(() => {});
+        const mic = el('button', 'btn-orange', '🎤 押して話す');
+        const heard = el('p', 'small', '');
+        mic.addEventListener('click', () => listen(w, mic, heard, feedback));
+        const row = el('div', 'row');
+        row.append(mic);
+        taskArea.replaceChildren(row, heard, feedback);
+    }
+
+    function listen(w, mic, heard, feedback) {
+        stopRecognition();
+        if (synth) synth.cancel();
+
+        const rec = new SpeechRec();
+        recognition = rec;
+        rec.lang = 'en-US';
+        rec.interimResults = false;
+        rec.maxAlternatives = 5;
+
+        mic.disabled = true;
+        mic.textContent = '👂 聞いています…';
+        feedback.textContent = '';
+        feedback.className = 'feedback';
+        heard.textContent = '';
+
+        const target = normSpeech(w.en);
+        rec.onresult = e => {
+            const alts = [...e.results[0]].map(a => a.transcript);
+            const ok = alts.some(a => {
+                const n = normSpeech(a);
+                return n === target || ` ${n} `.includes(` ${target} `);
+            });
+            heard.textContent = `聞き取った言葉：${alts[0] || '（なし）'}`;
+            score.total++;
+            if (ok) {
+                score.ok++;
+                feedback.textContent = '⭕ よく言えました！';
+                feedback.className = 'feedback ok';
+            } else {
+                feedback.textContent = '🔁 おしい！ お手本（🔊）を聞いて、もう一度言ってみよう';
+                feedback.className = 'feedback ng';
+            }
+            updateUI();
+        };
+        rec.onerror = e => {
+            const msgs = {
+                'not-allowed': 'マイクの使用が許可されていません。ブラウザの設定でマイクを許可してください。',
+                'service-not-allowed': 'マイクの使用が許可されていません。ブラウザの設定でマイクを許可してください。',
+                'no-speech': '声が聞こえませんでした。もう一度どうぞ。',
+                'audio-capture': 'マイクが見つかりません。',
+                'network': 'インターネットにつながっていないため、発音チェックができません。',
+            };
+            if (e.error === 'aborted') return;
+            feedback.textContent = msgs[e.error] || `うまく聞き取れませんでした（${e.error}）`;
+            feedback.className = 'feedback ng';
+        };
+        rec.onend = () => {
+            if (recognition === rec) recognition = null;
+            mic.disabled = false;
+            mic.textContent = '🎤 押して話す';
+        };
+        try {
+            rec.start();
+        } catch (err) {
+            rec.onend();
+            feedback.textContent = 'マイクを開始できませんでした。';
+            feedback.className = 'feedback ng';
+        }
+    }
+
+    /* ================= 終了画面 ================= */
+    function showFinish() {
+        newRun();
+        phase = 'finished';
+        const ws = words();
+        const known = ws.filter(w => w.known).length;
+        const lines = [`覚えた単語：${known} / ${ws.length}`];
+        if (isTestMode(mode) && score.total) lines.push(`今回の正解：${score.ok} / ${score.total}`);
+
+        wordCard.replaceChildren(
+            el('div', 'main ja', known === ws.length ? '🏆 全部覚えた！すごい！' : '🎉 おつかれさま！'),
+            el('div', 'sub', '最後まで終わったよ。'),
+            ...lines.map(t => el('div', 'hint', t))
+        );
+
+        const again = el('button', 'btn-blue', 'もう一度');
+        again.addEventListener('click', restart);
+        const row = el('div', 'row');
+        row.append(again);
+        if (known < ws.length) {
+            const review = el('button', 'btn-orange', '「まだ」の単語だけ復習');
+            review.addEventListener('click', () => setOnlyUnknown(true));
+            row.append(review);
+        }
+        taskArea.replaceChildren(row);
+        taskArea.classList.remove('hidden');
+        updateUI();
+        showMessage('最後まで終わりました！', 'success');
+    }
+
+    function renderAllKnown() {
+        phase = 'finished';
+        wordCard.replaceChildren(
+            el('div', 'main ja', '🏆 「まだ」の単語はありません'),
+            el('div', 'sub', '全部覚えたね！')
+        );
+        const all = el('button', 'btn-blue', '全部の単語で学習する');
+        all.addEventListener('click', () => setOnlyUnknown(false));
+        const row = el('div', 'row');
+        row.append(all);
+        taskArea.replaceChildren(row);
+        taskArea.classList.remove('hidden');
+    }
+
+    /* ================= 操作 ================= */
+    function stopAutoplay() {
+        if (!autoplay) return;
+        autoplay = false;
+        newRun();
+        renderAutoplayBtn();
+        const w = cur();
+        if (w) {
+            showBoth(w);
+            revealed = true;
+            phase = 'done';
+        }
+        updateUI();
+    }
+
+    function toggleAutoplay() {
+        if (autoplay) { stopAutoplay(); return; }
+        if (!order.length) return;
+        if (phase === 'finished' || pos >= order.length - 1) pos = 0;
+        autoplay = true;
+        renderAutoplayBtn();
+        showCurrent();
+    }
+
+    function nextWord() {
+        stopAutoplay();
+        if (!order.length || phase === 'finished') return;
+        if (pos < order.length - 1) {
+            pos++;
+            showCurrent();
+        } else {
+            showFinish();
+        }
+    }
+
+    function previousWord() {
+        stopAutoplay();
+        if (order.length && pos > 0 && phase !== 'finished') {
+            pos--;
+            showCurrent();
+        }
+    }
+
+    function restart() {
+        stopAutoplay();
+        buildOrder();      // 「まだ」の印の変更を反映
+        score = { ok: 0, total: 0 };
+        applyModeUI();
+        showCurrent();
+    }
+
+    function shuffleWords() {
+        if (words().length < 2) return;
+        stopAutoplay();
+        buildOrder();
+        shuffleArray(order);
+        score = { ok: 0, total: 0 };
+        applyModeUI();
+        showCurrent();      // モードは変えない
+        showMessage('単語をシャッフルしました。', 'success');
+    }
+
+    function setOnlyUnknown(val) {
+        store.settings.onlyUnknown = val;
+        onlyUnknownChk.checked = val;
+        saveStore();
+        restart();
+    }
+
+    function markAndNext(val) {
+        const w = cur();
+        if (!w) return;
+        setKnown(w, val);
+        if (!autoplay) nextWord();
+    }
+
+    function setMode(m) {
+        stopAutoplay();
+        mode = m;
+        score = { ok: 0, total: 0 };
+        applyModeUI();
+        showCurrent();
+    }
+
+    function applyModeUI() {
+        modeButtons.forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+        modeHint.textContent = MODES[mode].hint;
+        const test = isTestMode(mode);
+        autoplayBtn.classList.toggle('hidden', test);
+        knowRow.classList.toggle('hidden', test);
+        taskArea.classList.remove('hidden');
+        openStep(MODES[mode].step);
+    }
+
+    function openStep(n) {
+        stepHeads.forEach(h => {
+            const open = Number(h.dataset.step) === n;
+            h.setAttribute('aria-expanded', String(open));
+            h.querySelector('.chev').textContent = open ? '▼' : '▶';
+            document.querySelector(`[data-step-body="${h.dataset.step}"]`).classList.toggle('hidden', !open);
+        });
+    }
+
+    function showTab(which) {
+        stopAutoplay();
+        newRun();
+        const learn = which === 'learn';
+        inputSection.classList.toggle('hidden', learn);
+        learnSection.classList.toggle('hidden', !learn);
+        inputTab.classList.toggle('active', !learn);
+        learnTab.classList.toggle('active', learn);
+        if (learn) {
+            if (orderFor !== store.current) buildOrder();
+            applyModeUI();
+            showCurrent();
+        }
+    }
+
+    /* ================= 単語リストの読み込み・管理 ================= */
+    function parseData(text) {
+        const result = [];
+        let skipped = 0;
+        const clean = s => (s || '').trim().replace(/^"(.*)"$/, '$1').trim();
+
+        for (const line of text.replace(/\r\n?/g, '\n').split('\n')) {
+            if (!line.trim()) continue;
+            let en = '', ja = '';
+            if (line.includes('\t')) {
+                const parts = line.split('\t');
+                en = parts[0];
+                ja = parts[1];
+            } else if (line.includes(',')) {
+                const i = line.indexOf(',');
+                en = line.slice(0, i);
+                ja = line.slice(i + 1);
+            } else {
+                // 「apple りんご」のように空白区切りの場合（英語の後に日本語が続く形）
+                const m = line.match(/^([\x20-\x7E]+?)\s+([^\x00-\x7F].*)$/);
+                if (m) { en = m[1]; ja = m[2]; }
+            }
+            en = clean(en);
+            ja = clean(ja);
+            if (en && ja) result.push({ en, ja, known: false });
+            else skipped++;
+        }
+        return { list: result, skipped };
+    }
+
+    function loadWords() {
+        stopAutoplay();
+        const text = dataInput.value.trim();
+        if (!text) {
+            showMessage('単語を貼り付けてから「保存して学習を始める」を押してください。', 'error');
+            return;
+        }
+        const { list, skipped } = parseData(text);
+        if (!list.length) {
+            showMessage('有効な単語データが見つかりませんでした。「英語（タブまたはカンマ）意味」の形か確認してください。', 'error', 6000);
+            return;
+        }
+
+        let name = listName.value.trim() || 'マイリスト';
+        if (FORBIDDEN_NAMES.includes(name)) name += '_';
+
+        // 同じリストを読み込み直したときは「覚えた」の記録を引き継ぐ
+        if (hasList(store, name)) {
+            const knownSet = new Set(store.lists[name].filter(w => w.known).map(w => `${w.en}\t${w.ja}`));
+            list.forEach(w => { w.known = knownSet.has(`${w.en}\t${w.ja}`); });
+        }
+
+        store.lists[name] = list;
+        store.current = name;
+        saveStore();
+        refreshListSelect();
+        listName.value = name;
+        buildOrder();
+        showTab('learn');
+        showMessage(
+            `「${name}」に${list.length}語を保存しました。` + (skipped ? `（読み込めなかった行：${skipped}行）` : ''),
+            skipped ? 'info' : 'success',
+            6000
+        );
+    }
+
+    function refreshListSelect() {
+        listSelect.replaceChildren();
+        const names = Object.keys(store.lists);
+        if (!names.length) listSelect.append(new Option('（まだありません）', ''));
+        names.forEach(n => listSelect.append(new Option(`${n}（${store.lists[n].length}語）`, n)));
+        listSelect.value = store.current || '';
+        listSelect.disabled = !names.length;
+        $('deleteListBtn').disabled = !names.length;
+    }
+
+    function fillEditor() {
+        const ws = words();
+        listName.value = store.current || '';
+        dataInput.value = ws.map(w => `${w.en}\t${w.ja}`).join('\n');
+    }
+
+    function selectList() {
+        if (!hasList(store, listSelect.value)) return;
+        store.current = listSelect.value;
+        saveStore();
+        fillEditor();
+        buildOrder();
+        showMessage(`「${store.current}」を選びました。`, 'success');
+    }
+
+    function deleteList() {
+        const name = store.current;
+        if (!hasList(store, name)) return;
+        if (!confirm(`リスト「${name}」を削除しますか？（覚えた記録も消えます）`)) return;
+        delete store.lists[name];
+        store.current = Object.keys(store.lists)[0] || null;
+        saveStore();
+        refreshListSelect();
+        fillEditor();
+        buildOrder();
+        showMessage(`「${name}」を削除しました。`, 'success');
+    }
+
+    function newList() {
+        listName.value = '';
+        dataInput.value = '';
+        listName.focus();
+        showMessage('名前を付けて、単語を貼り付けてください。', 'info');
+    }
+
+    /* ================= イベント登録 ================= */
+    inputTab.addEventListener('click', () => showTab('input'));
+    learnTab.addEventListener('click', () => { unlockAudio(); showTab('learn'); });
+    $('loadWordsBtn').addEventListener('click', () => { unlockAudio(); loadWords(); });
+    listSelect.addEventListener('change', selectList);
+    $('newListBtn').addEventListener('click', newList);
+    $('deleteListBtn').addEventListener('click', deleteList);
+
+    wordCard.addEventListener('click', onCardClick);
+    pauseOverlay.addEventListener('click', onCardClick);
+    knowBtn.addEventListener('click', () => markAndNext(true));
+    notYetBtn.addEventListener('click', () => markAndNext(false));
+
+    restartBtn.addEventListener('click', restart);
+    prevBtn.addEventListener('click', previousWord);
+    nextBtn.addEventListener('click', nextWord);
+    shuffleBtn.addEventListener('click', shuffleWords);
+    autoplayBtn.addEventListener('click', () => { unlockAudio(); toggleAutoplay(); });
+    pauseBtn.addEventListener('click', togglePause);
+    speakNormalBtn.addEventListener('click', () => { unlockAudio(); speakNow(Number(store.settings.rate) || 1); });
+    speakSlowBtn.addEventListener('click', () => { unlockAudio(); speakNow(0.6); });
+    onlyUnknownChk.addEventListener('change', () => setOnlyUnknown(onlyUnknownChk.checked));
+
+    modeButtons.forEach(b => b.addEventListener('click', () => { unlockAudio(); setMode(b.dataset.mode); }));
+    stepHeads.forEach(h => h.addEventListener('click', () => openStep(Number(h.dataset.step))));
+
+    rateSelect.addEventListener('change', () => { store.settings.rate = Number(rateSelect.value); saveStore(); });
+    waitSelect.addEventListener('change', () => { store.settings.wait = Number(waitSelect.value); saveStore(); });
+    speakJaChk.addEventListener('change', () => { store.settings.speakJa = speakJaChk.checked; saveStore(); });
+    voiceSelect.addEventListener('change', () => {
+        const v = synth ? synth.getVoices().find(x => x.name === voiceSelect.value) : null;
+        enVoice = v || null;
+        store.settings.voiceName = voiceSelect.value;
+        saveStore();
+        if (synth) { synth.cancel(); speak('Hello. Nice to meet you.'); }
+    });
+
+    // キーボード操作
+    document.addEventListener('keydown', e => {
+        if (learnSection.classList.contains('hidden')) return;
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        const t = e.target;
+        if (t.matches && t.matches('input, textarea, select')) return;
+        const isButton = t.tagName === 'BUTTON';
+
+        switch (e.key) {
+            case ' ':
+                e.preventDefault();
+                if (isButton) t.blur();
+                onCardClick();
+                break;
+            case 'ArrowRight':
+                e.preventDefault();
+                nextWord();
+                break;
+            case 'ArrowLeft':
+                e.preventDefault();
+                previousWord();
+                break;
+            case 'Enter':
+                if (isButton) return;   // フォーカス中のボタンは通常どおり押す
+                e.preventDefault();
+                if (t === wordCard) onCardClick();
+                else if (answered && isTestMode(mode)) nextWord();
+                else if (!speakNormalBtn.disabled) speakNow(Number(store.settings.rate) || 1);
+                break;
+            case '1': case '2': case '3': case '4': {
+                const choice = taskArea.querySelectorAll('.choice')[Number(e.key) - 1];
+                if (choice && !choice.disabled) choice.click();
+                break;
+            }
+        }
+    });
+    document.addEventListener('keyup', e => {
+        if (e.key === ' ' && e.target.tagName === 'BUTTON') e.preventDefault();
+    });
+
+    /* ================= 起動時 ================= */
+    if (synth) {
+        loadVoices();
+        if (typeof synth.addEventListener === 'function') synth.addEventListener('voiceschanged', loadVoices);
+        else synth.onvoiceschanged = loadVoices;
+    }
+
+    rateSelect.value = String(store.settings.rate);
+    if (!rateSelect.value) rateSelect.value = '1';
+    waitSelect.value = String(store.settings.wait);
+    if (!waitSelect.value) waitSelect.value = '3';
+    speakJaChk.checked = !!store.settings.speakJa;
+    onlyUnknownChk.checked = !!store.settings.onlyUnknown;
+
+    refreshListSelect();
+    fillEditor();
+    buildOrder();
+    applyModeUI();
+    renderAutoplayBtn();
+    updateUI();
+    saveStore();
+
+    if (!synth) {
+        showMessage('このブラウザは音声の読み上げに対応していません。', 'error', 0);
+    } else if (store.current) {
+        showMessage(`前回のリスト「${store.current}」（${words().length}語）が保存されています。「② 学習する」を押して始めよう。`, 'info', 8000);
+    }
+})();
+</script>
+</body>
+</html>
